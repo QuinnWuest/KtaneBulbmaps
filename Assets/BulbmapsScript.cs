@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
-using KModkit;
 
 public class BulbmapsScript : MonoBehaviour
 {
@@ -103,15 +100,37 @@ public class BulbmapsScript : MonoBehaviour
 
     private bool[] GenerateBulbLightState(int stateNum)
     {
-        var s = stateNum + 1;
-        var map = new int[36];
-        while (map.Count(i => i == 1) != s * 6)
+        return FindBulbArrangement(stateNum + 1, new bool[36], Enumerable.Range(0, 36).ToArray().Shuffle(), 0).First();
+    }
+
+    private static IEnumerable<bool[]> FindBulbArrangement(int numBulbs, bool[] sofar, int[] indexOrder, int ix)
+    {
+        if (ix == sofar.Length)
         {
-            
+            yield return sofar;
+            yield break;
         }
-        var arr = map.Select(i => i == 1).ToArray();
-        Debug.Log(arr.Select(i => i ? "#" : ".").Join(""));
-        return arr;
+
+        var indexesAlreadyPlaced = indexOrder.Take(ix);
+        var nextIndexToBePlaced = indexOrder[ix];
+
+        var bulbsAlreadyInCurrentRow = indexesAlreadyPlaced.Count(i => i / 6 == nextIndexToBePlaced / 6 && sofar[i]);
+        var nonBulbsAlreadyInCurrentRow = indexesAlreadyPlaced.Count(i => i / 6 == nextIndexToBePlaced / 6 && !sofar[i]);
+        var bulbsAlreadyInCurrentColumn = indexesAlreadyPlaced.Count(i => i % 6 == nextIndexToBePlaced % 6 && sofar[i]);
+        var nonBulbsAlreadyInCurrentColumn = indexesAlreadyPlaced.Count(i => i % 6 == nextIndexToBePlaced % 6 && !sofar[i]);
+
+        if (bulbsAlreadyInCurrentRow < numBulbs && bulbsAlreadyInCurrentColumn < numBulbs)
+        {
+            sofar[nextIndexToBePlaced] = true;
+            foreach (var result in FindBulbArrangement(numBulbs, sofar, indexOrder, ix + 1))
+                yield return result;
+        }
+        if (nonBulbsAlreadyInCurrentRow < 6 - numBulbs && nonBulbsAlreadyInCurrentColumn < 6 - numBulbs)
+        {
+            sofar[nextIndexToBePlaced] = false;
+            foreach (var result in FindBulbArrangement(numBulbs, sofar, indexOrder, ix + 1))
+                yield return result;
+        }
     }
 
     private void SetBulbs()
