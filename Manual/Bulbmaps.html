@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1">
+    <title>Bulbmaps — Keep Talking and Nobody Explodes Module</title>
+    <link rel="stylesheet" type="text/css" href="css/font.css">
+    <link rel="stylesheet" type="text/css" href="css/normalize.css">
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+    <script src="js/ktane-utils.js"></script>
+    <style>
+        .flavour-text {
+            font-size: 5pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="section">
+        <div class="page page-bg-01">
+            <div class="page-header">
+                <span class="page-header-doc-title">Keep Talking and Nobody Explodes Mod</span>
+                <span class="page-header-section-title">Bulbmaps</span>
+            </div>
+            <div class="page-content">
+                <img src="img/Component/Bulbmaps.svg" class="diagram">
+                <h2>On the Subject of Bulbmaps</h2>
+                <p class="flavour-text">
+                    Exactly two duotrigintillion three hundred seventy-two untrigintillion
+                    five hundred seventeen trigintillion three hundred eighty-three novemvigintillion seven hundred
+                    two octovigintillion four hundred twenty-five septvigintillion three hundred thirty-three sexvigintillion
+                    five hundred thirty quinvigintillion six hundred fifty-four quattuorvigintillion six hundred sixty-one
+                    trevigintillion six hundred eighty-seven duovigintillion seven hundred eighty-nine unvigintillion three
+                    hundred sixty-nine vigintillion six hundred seventy-four nondecillion one hundred thirty-four octodecillion
+                    six hundred six septdecillion eight hundred sixty-eight sexdecillion nine hundred fifty-five quindecillion
+                    seven hundred one quattuordecillion seven hundred eighty-one tredecillion seven hundred forty-three duodecillion
+                    six hundred twenty-five undecillion nine hundred twenty-two decillion one hundred fifty-nine nonillion five
+                    hundred sixty-six octillion seven hundred eighty septillion four hundred eighty-one sextillion five hundred
+                    thirty-eight quintillion two hundred seventy-six quadrillion three hundred seventy-four trillion two hundred
+                    forty-six billion four hundred fifty-eight million three hundred ninety-two thousand five hundred seventy-six
+                    combinations. Counted one at a time. For sure. :)
+                </p>
+                <p>There are two 6×6 grids of bulbs on the module. Use the switch at the right to toggle between the two grids.</p>
+                <ul>
+                    <li>Each bulb can be either lit or unlit.</li>
+                    <li>Each bulb can either be transparent or opaque.</li>
+                    <li>Each bulb can be colored red, green, blue, magenta, yellow, or white.</li>
+                </ul>
+                <p>All eight quadrants across the two bulbmaps will be converted into a binary string with a length of eight.</p>
+                <p>
+                    In the order of red bulbs, green bulbs, blue bulbs, magenta bulbs, yellow bulbs, white bulbs, lit bulbs, and transparent bulbs,
+                    set each bit in the binary string to a one if there is an odd number of said properties within the given quadrant, or a zero otherwise.
+                </p>
+                <p>Place the binary strings into the rows of the 8×8 grid. The order of the binary strings are derived from:</p>
+                <ul>
+                    <li>The top-left quadrant of the bulbmap when the switch is flipped to O.</li>
+                    <li>The top-right quadrant of the bulbmap when the switch is flipped to O.</li>
+                    <li>The bottom-left quadrant of the bulbmap when the switch is flipped to O.</li>
+                    <li>The bottom-right quadrant of the bulbmap when the switch is flipped to O.</li>
+                    <li>The bottom-right quadrant of the bulbmap when the switch is flipped to I.</li>
+                    <li>The bottom-left quadrant of the bulbmap when the switch is flipped to I.</li>
+                    <li>The top-right quadrant of the bulbmap when the switch is flipped to I.</li>
+                    <li>The top-left quadrant of the bulbmap when the switch is flipped to I.</li>
+                </ul>
+                <p>In the table on the next page, start at the row equal to the first letter in the serial number, and analyze the condition.</p>
+                <p>
+                    If it is true, find the calculated number for that condition, keeping all answers between 1 and 6 by repeatedly adding or subtracting 6 until it falls within that range.
+                    Press the button equal to that calculation.
+                </p>
+                <p>Continue through the remaining conditions, going down the table. (or up if there is an odd number of batteries)</p>
+                <p>Pressing the button whose label is equal to the first instance of a repetition of a calculated number will disarm the module.</p>
+
+            </div>
+            <div class="page-footer relative-footer">Page 1 of 3</div>
+        </div>
+        <div class="page page-bg-01">
+            <div class="page-header">
+                <span class="page-header-doc-title">Keep Talking and Nobody Explodes Mod</span>
+                <span class="page-header-section-title">Bulbmaps</span>
+            </div>
+            <div class="page-content">
+                <table class="bulbmaps-table">
+                    <tr>
+                        <th style="width: 80px;">Character</th>
+                        <th style="width: 300px;">Condition</th>
+                        <th style="width: 200px;">Calculation</th>
+                    </tr>
+                    <tr>
+                        <th>A</th>
+                        <td>The top half of the bitmap contains at least 24 ones.</td>
+                        <td>Unlit green bulbs.</td>
+                    </tr>
+                    <tr>
+                        <th>B</th>
+                        <td>Any row is identical to any column.</td>
+                        <td>Opaque magenta bulbs.</td>
+                    </tr>
+                    <tr>
+                        <th>C</th>
+                        <td>Exactly one row has the same number of ones as transparent blue bulbs.</td>
+                        <td>Transparent blue bulbs.</td>
+                    </tr>
+                    <tr>
+                        <th>D</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>E</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>F</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>G</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>H</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>I</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>J</th>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="page-footer relative-footer">Page 2 of 3</div>
+        </div>
+        <div class="page page-bg-01">
+            <div class="page-header">
+                <span class="page-header-doc-title">Keep Talking and Nobody Explodes Mod</span>
+                <span class="page-header-section-title">Bulbmaps</span>
+            </div>
+            <div class="page-content">
+            </div>
+            <div class="page-footer relative-footer">Page 3 of 3</div>
+        </div>
+    </div>
+</body>
+</html>
