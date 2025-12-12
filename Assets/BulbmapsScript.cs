@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
-using KModkit;
+using Bulbmaps;
 
 public class BulbmapsScript : MonoBehaviour
 {
@@ -28,25 +26,86 @@ public class BulbmapsScript : MonoBehaviour
     private static int _moduleIdCounter = 1;
     private bool _moduleSolved;
 
-    private int[][] _bulbColors = new int[2][] { new int[36], new int[36] };
-    private bool[][] _bulbLightStates = new bool[4][] { new bool[36], new bool[36], new bool[36], new bool[36] };
-    private int[] _bulbStateOrder;
-    private int _currentBulbState;
-    private bool[][] _bulbTransparencies = new bool[2][] { new bool[36], new bool[36] };
-    private int _currentBulbMap;
+    private int _currentMap;
     private bool _isAnimating;
 
-    private static readonly Color32[] _lightColors = new Color32[] { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255), new Color32(80, 100, 255, 255), new Color32(255, 0, 255, 255), new Color32(255, 255, 0, 255), new Color32(255, 255, 255, 255) };
-    private static readonly int[][] _quadrants = new int[4][] {
-        new int[] { 0, 1, 2, 6, 7, 8, 12, 13, 14 },
-        new int[] { 3, 4, 5, 9, 10, 11, 15, 16, 17 },
-        new int[] { 18, 19, 20, 24, 25, 26, 30, 31, 32 },
-        new int[] { 21, 22, 23, 27, 28, 29, 33, 34, 35 }
-    };
-    private static readonly int[] _quadrantOrder = new int[8] { 0, 1, 2, 3, 3, 2, 1, 0 };
+    private BulbColor _mostCommonColor;
 
-    private bool[] _bitmap = new bool[64];
-    private bool[][] _bitmapRows = new bool[8][] { new bool[8], new bool[8], new bool[8], new bool[8], new bool[8], new bool[8], new bool[8], new bool[8] };
+    public enum BulbColor
+    {
+        Red,
+        Yellow,
+        Green,
+        Blue,
+        Purple,
+        White
+    }
+
+    private static readonly Color32[] _lightColors = new Color32[] {
+        new Color32(255, 80, 80, 255),      // red
+        new Color32(255, 255, 80, 255),     // yellow
+        new Color32(80, 255, 80, 255),      // green
+        new Color32(100, 120, 255, 255),    // blue
+        new Color32(255, 80, 255, 255),     // purple
+        new Color32(200, 200, 200, 255)     // white
+    };
+
+    public class BulbInfo
+    {
+        public BulbColor Color;
+        public bool IsLit;
+        public bool IsTransparent;
+
+        public BulbInfo(BulbColor color, bool light, bool transparency)
+        {
+            Color = color;
+            IsLit = light;
+            IsTransparent = transparency;
+        }
+    }
+
+    public BulbInfo[][] _bulbMapInfo = new BulbInfo[2][] { new BulbInfo[36], new BulbInfo[36] };
+
+    private static readonly string[] _rules = new string[]
+    {
+        "Transparent green bulbs",
+        "Lit white bulbs",
+        "Bulbs in the same position across both maps with a matching transparency",
+        "Bulbs that have four transparent bulbs orthogonally adjacent to it",
+        "Unlit white bulbs",
+        "Unlit yellow bulbs",
+        "2×2 section of bulbs with matching colors",
+        "Opaque blue bulbs",
+        "Opaque red bulbs",
+        "Opaque green bulbs",
+        "Transparent white bulbs",
+        "Transparent red bulbs",
+        "Transparent blue bulbs",
+        "Bulbs that have four opaque bulbs orthogonally adjacent to it",
+        "Transparent yellow bulbs",
+        "Bulbs that have four unlit bulbs orthogonally adjacent to it",
+        "Lit red bulbs",
+        "Opaque white bulbs",
+        "Bulbs in the same position across both maps with a matching color",
+        "Unlit red bulbs",
+        "Opaque purple bulbs",
+        "Columns or rows with an equal count of transparent and opaque bulbs",
+        "Unlit purple bulbs",
+        "2×2 section of bulbs with matching lit state",
+        "Lit green bulbs",
+        "Lit blue bulbs",
+        "Lit yellow bulbs",
+        "Columns or rows with an equal count of lit and unlit bulbs",
+        "Opaque yellow bulbs",
+        "Unlit blue bulbs",
+        "Bulbs in the same position across both maps with a matching lit state",
+        "Unlit green bulbs",
+        "Bulbs with a matching colored bulb orthogonally adjacent to it",
+        "Lit purple bulbs",
+        "Transparent purple bulbs",
+        "Bulbs that have four lit bulbs orthogonally adjacent to it",
+        "2×2 section of bulbs with matching transparency",
+    };
 
     private void Start()
     {
@@ -54,40 +113,72 @@ public class BulbmapsScript : MonoBehaviour
         SwitchSel.OnInteract += SwitchPress;
         for (int i = 0; i < ButtonSels.Length; i++)
             ButtonSels[i].OnInteract += ButtonPress(i);
-
-        for (int j = 0; j < 2; j++)
-        {
-            for (int i = 0; i < 36; i++)
-            {
-                _bulbColors[j][i] = Rnd.Range(0, 6);
-                _bulbTransparencies[j][i] = Rnd.Range(0, 2) == 0;
-            }
-        }
-        for (int i = 0; i < _bulbLightStates.Length; i++)
-            _bulbLightStates[i] = GenerateBulbLightState(i);
-        _bulbStateOrder = Enumerable.Range(0, 4).ToArray().Shuffle();
         foreach (var l in BulbLights)
             l.range *= transform.lossyScale.x;
-        SetBulbs();
-        SetBulbLights();
 
         for (int map = 0; map < 2; map++)
         {
-            Debug.LogFormat("[Bulbmaps #{0}] Bulbmap on the {1} page:", _moduleId, map == 0 ? "O" : "I");
-            for (int row = 0; row < 6; row++)
+            for (int i = 0; i < 36; i++)
             {
-                var colors = Enumerable.Range(0, 6).Select(i => "RGBMYW"[_bulbColors[map][i + (6 * row)]]).Join("");
-                var transparents = Enumerable.Range(0, 6).Select(i => _bulbTransparencies[map][i + (6 * row)] ? "t" : "o").Join("");
-                Debug.LogFormat("[Bulbmaps #{0}] {1}", _moduleId, Enumerable.Range(0, 6).Select(i => colors[i].ToString() + transparents[i].ToString()).Join(" "));
+                var c = (BulbColor)Rnd.Range(0, 6);
+                var l = Rnd.Range(0, 2) == 0;
+                var t = Rnd.Range(0, 2) == 0;
+                _bulbMapInfo[map][i] = new BulbInfo(c, l, t);
             }
         }
+
+        var colorCounts = Enum.GetValues(typeof(BulbColor))
+            .Cast<BulbColor>()
+            .ToDictionary(c => c, c => 0);
+
+        for (int map = 0; map < 2; map++)
+            for (int i = 0; i < 36; i++)
+                colorCounts[_bulbMapInfo[map][i].Color]++;
+
+        int maxCount = colorCounts.Values.Max();
+
+        var tiedColors = colorCounts
+            .Where(kv => kv.Value == maxCount)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        if (tiedColors.Count > 1)
+        {
+            BulbColor winnerColor = tiedColors[Rnd.Range(0, tiedColors.Count)];
+            _mostCommonColor = winnerColor;
+            for (int map = 0; map < 2; map++)
+            {
+                for (int i = 0; i < 36; i++)
+                {
+                    if (_bulbMapInfo[map][i].Color != winnerColor)
+                    {
+                        _bulbMapInfo[map][i].Color = winnerColor;
+                        goto Done;
+                    }
+                }
+            }
+        }
+        else
+        {
+            _mostCommonColor = tiedColors[0];
+        }
+        Done:;
+        LogBulbmaps();
+
+        Debug.LogFormat("[Bulbmaps #{0}] The most common occurring color is {1}.", _moduleId, _mostCommonColor);
+
+        Calculate();
+
+        SetBulbs(_currentMap);
+        SetBulbLights(_currentMap);
     }
 
     private KMSelectable.OnInteractHandler ButtonPress(int btn)
     {
         return delegate ()
         {
-
+            if (_moduleSolved)
+                return false;
             return false;
         };
     }
@@ -101,32 +192,35 @@ public class BulbmapsScript : MonoBehaviour
         return false;
     }
 
-    private bool[] GenerateBulbLightState(int stateNum)
+    private void LogBulbmaps()
     {
-        var s = stateNum + 1;
-        var map = new int[36];
-        while (map.Count(i => i == 1) != s * 6)
+        for (int map = 0; map < 2; map++)
         {
-            
-        }
-        var arr = map.Select(i => i == 1).ToArray();
-        Debug.Log(arr.Select(i => i ? "#" : ".").Join(""));
-        return arr;
-    }
-
-    private void SetBulbs()
-    {
-        for (int i = 0; i < 36; i++)
-        {
-            BulbObjs[i].GetComponent<MeshRenderer>().material = BulbMats[_bulbColors[_currentBulbMap][i] + (_bulbTransparencies[_currentBulbMap][i] ? 6 : 0)];
-            BulbLights[i].color = _lightColors[_bulbColors[_currentBulbMap][i]];
+            Debug.LogFormat("[Bulbmaps #{0}] Bulbmap on the {1} page:", _moduleId, map == 0 ? "O" : "I");
+            for (int row = 0; row < 6; row++)
+            {
+                var colors = Enumerable.Range(0, 6).Select(col => "RYGBPW"[(int)_bulbMapInfo[map][col + (6 * row)].Color]).Join("");
+                var transparents = Enumerable.Range(0, 6).Select(col => _bulbMapInfo[map][col + (6 * row)].IsTransparent ? "t" : "o").Join("");
+                var lightStates = Enumerable.Range(0, 6).Select(col => _bulbMapInfo[map][col + (6 * row)].IsLit ? "1" : "0").Join("");
+                Debug.LogFormat("[Bulbmaps #{0}] {1}", _moduleId, Enumerable.Range(0, 6).Select(i => colors[i].ToString() + transparents[i].ToString() + lightStates[i].ToString()).Join(" "));
+            }
         }
     }
 
-    private void SetBulbLights()
+    private void SetBulbs(int map)
     {
         for (int i = 0; i < 36; i++)
-            BulbLights[i].enabled = _bulbLightStates[_currentBulbMap][i];
+        {
+            BulbObjs[i].GetComponent<MeshRenderer>().material =
+                BulbMats[(int)_bulbMapInfo[map][i].Color + (_bulbMapInfo[map][i].IsTransparent ? 6 : 0)];
+            BulbLights[i].color = _lightColors[(int)_bulbMapInfo[map][i].Color];
+        }
+    }
+
+    private void SetBulbLights(int map)
+    {
+        for (int i = 0; i < 36; i++)
+            BulbLights[i].enabled = _bulbMapInfo[map][i].IsLit;
     }
 
     private IEnumerator FlipSwitch()
@@ -135,11 +229,11 @@ public class BulbmapsScript : MonoBehaviour
         var elapsed = 0f;
         while (elapsed < duration)
         {
-            SwitchCasing.transform.localEulerAngles = new Vector3(180f, 0f, Easing.InOutQuad(elapsed, _currentBulbMap * 30f, (_currentBulbMap + 1) % 2 * 30f, duration));
+            SwitchCasing.transform.localEulerAngles = new Vector3(180f, 0f, Easing.InOutQuad(elapsed, (_currentMap % 2) * 30f, (_currentMap + 1) % 2 * 30f, duration));
             yield return null;
             elapsed += Time.deltaTime;
         }
-        SwitchCasing.transform.localEulerAngles = new Vector3(180f, 0f, (_currentBulbMap + 1) % 2 * 30f);
+        SwitchCasing.transform.localEulerAngles = new Vector3(180f, 0f, (_currentMap + 1) % 2 * 30f);
     }
 
     private IEnumerator ToggleBulbs()
@@ -164,9 +258,9 @@ public class BulbmapsScript : MonoBehaviour
             yield return null;
             elapsed += Time.deltaTime;
         }
-        _currentBulbMap = (_currentBulbMap + 1) % 2;
+        _currentMap = (_currentMap + 1) % 2;
         yield return null;
-        SetBulbs();
+        SetBulbs(_currentMap);
         yield return new WaitForSeconds(0.25f);
         elapsed = 0f;
         while (elapsed < duration)
@@ -186,7 +280,189 @@ public class BulbmapsScript : MonoBehaviour
             elapsed += Time.deltaTime;
         }
         GridParent.transform.localPosition = new Vector3(0f, 0f, 0f);
-        SetBulbLights();
+        SetBulbLights(_currentMap);
         _isAnimating = false;
+    }
+
+    private void Calculate()
+    {
+        Hex startingHex;
+        switch (_mostCommonColor)
+        {
+            case BulbColor.Red:
+                startingHex = new Hex(0, -2);
+                break;
+            case BulbColor.Yellow:
+                startingHex = new Hex(2, -2);
+                break;
+            case BulbColor.Green:
+                startingHex = new Hex(2, 0);
+                break;
+            case BulbColor.Blue:
+                startingHex = new Hex(0, 2);
+                break;
+            case BulbColor.Purple:
+                startingHex = new Hex(-2, 2);
+                break;
+            case BulbColor.White:
+                startingHex = new Hex(-2, 0);
+                break;
+            default:
+                throw new InvalidOperationException();
+        }
+
+    }
+
+    private int GetProperty(BulbInfo[][] bulbinfo, int index)
+    {
+        switch (index)
+        {
+            case 0:
+                return bulbinfo.Select(map => map.Count(b => b.IsTransparent && b.Color == BulbColor.Green)).Sum();
+            case 1:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.White)).Sum();
+            case 2:
+                return Enumerable.Range(0, 36).Count(b => bulbinfo[0][b].IsTransparent == bulbinfo[1][b].IsTransparent);
+            case 3:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(i =>
+                            i % 6 != 0 && i % 6 != 5 &&
+                            i / 6 != 0 && i / 6 != 5 &&
+                            map[i - 6].IsTransparent &&
+                            map[i + 6].IsTransparent &&
+                            map[i - 1].IsTransparent &&
+                            map[i + 1].IsTransparent)
+                        .Count());
+            case 4:
+                return bulbinfo.Select(map => map.Count(b => !b.IsLit && b.Color == BulbColor.White)).Sum();
+            case 5:
+                return bulbinfo.Select(map => map.Count(b => !b.IsLit && b.Color == BulbColor.Yellow)).Sum();
+            case 6:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(i =>
+                            i % 6 != 5 && i / 6 != 5 &&
+                            map[i].Color == map[i + 1].Color &&
+                            map[i].Color == map[i + 6].Color &&
+                            map[i].Color == map[i + 7].Color)
+                        .Count());
+            case 7:
+                return bulbinfo.Select(map => map.Count(b => !b.IsTransparent && b.Color == BulbColor.Blue)).Sum();
+            case 8:
+                return bulbinfo.Select(map => map.Count(b => !b.IsTransparent && b.Color == BulbColor.Red)).Sum();
+            case 9:
+                return bulbinfo.Select(map => map.Count(b => !b.IsTransparent && b.Color == BulbColor.Green)).Sum();
+            case 10:
+                return bulbinfo.Select(map => map.Count(b => b.IsTransparent && b.Color == BulbColor.White)).Sum();
+            case 11:
+                return bulbinfo.Select(map => map.Count(b => b.IsTransparent && b.Color == BulbColor.Red)).Sum();
+            case 12:
+                return bulbinfo.Select(map => map.Count(b => b.IsTransparent && b.Color == BulbColor.Blue)).Sum();
+            case 13:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(b =>
+                            b % 6 != 0 && b % 6 != 5 &&
+                            b / 6 != 0 && b / 6 != 5 &&
+                            !map[b - 6].IsTransparent &&
+                            !map[b + 6].IsTransparent &&
+                            !map[b - 1].IsTransparent &&
+                            !map[b + 1].IsTransparent)
+                        .Count());
+            case 14:
+                return bulbinfo.Select(map => map.Count(b => b.IsTransparent && b.Color == BulbColor.Yellow)).Sum();
+            case 15:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(b =>
+                            b % 6 != 0 && b % 6 != 5 &&
+                            b / 6 != 0 && b / 6 != 5 &&
+                            !map[b - 6].IsLit &&
+                            !map[b + 6].IsLit &&
+                            !map[b - 1].IsLit &&
+                            !map[b + 1].IsLit)
+                        .Count());
+            case 16:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.Red)).Sum();
+            case 17:
+                return bulbinfo.Select(map => map.Count(b => !b.IsTransparent && b.Color == BulbColor.White)).Sum();
+            case 18:
+                return Enumerable.Range(0, 36)
+                    .Count(b => bulbinfo[0][b].Color == bulbinfo[1][b].Color);
+            case 19:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.Red)).Sum();
+            case 20:
+                return bulbinfo.Select(map => map.Count(b => !b.IsTransparent && b.Color == BulbColor.Purple)).Sum();
+            case 21:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 6).Count(r => Enumerable.Range(0, 6).Count(c => map[r * 6 + c].IsTransparent) == 3) +
+                    Enumerable.Range(0, 6).Count(c => Enumerable.Range(0, 6).Count(r => map[r * 6 + c].IsTransparent) == 3)
+                );
+            case 22:
+                return bulbinfo.Select(map => map.Count(b => !b.IsLit && b.Color == BulbColor.Purple)).Sum();
+            case 23:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(b =>
+                            b % 6 != 5 && b / 6 != 5 &&
+                            map[b].IsLit == map[b + 1].IsLit &&
+                            map[b].IsLit == map[b + 6].IsLit &&
+                            map[b].IsLit == map[b + 7].IsLit)
+                        .Count());
+            case 24:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.Green)).Sum();
+            case 25:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.Blue)).Sum();
+            case 26:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.Yellow)).Sum();
+            case 27:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 6).Count(r => Enumerable.Range(0, 6).Count(c => map[r * 6 + c].IsLit) == 3) +
+                    Enumerable.Range(0, 6).Count(c => Enumerable.Range(0, 6).Count(r => map[r * 6 + c].IsLit) == 3)
+                );
+            case 28:
+                return bulbinfo.Select(map => map.Count(b => !b.IsTransparent && b.Color == BulbColor.Yellow)).Sum();
+            case 29:
+                return bulbinfo.Select(map => map.Count(b => !b.IsLit && b.Color == BulbColor.Blue)).Sum();
+            case 30:
+                return Enumerable.Range(0, 36)
+                    .Count(b => bulbinfo[0][b].IsLit == bulbinfo[1][b].IsLit);
+            case 31:
+                return bulbinfo.Select(map => map.Count(b => !b.IsLit && b.Color == BulbColor.Green)).Sum();
+            case 32:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36).Count(b =>
+                        (b >= 6 && map[b].Color == map[b - 6].Color) ||
+                        (b < 30 && map[b].Color == map[b + 6].Color) ||
+                        (b % 6 != 0 && map[b].Color == map[b - 1].Color) ||
+                        (b % 6 != 5 && map[b].Color == map[b + 1].Color)
+                    ));
+            case 33:
+                return bulbinfo.Select(map => map.Count(b => b.IsLit && b.Color == BulbColor.Purple)).Sum();
+            case 34:
+                return bulbinfo.Select(map => map.Count(b => b.IsTransparent && b.Color == BulbColor.Purple)).Sum();
+            case 35:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(b =>
+                            b % 6 != 0 && b % 6 != 5 &&
+                            b / 6 != 0 && b / 6 != 5 &&
+                            map[b - 6].IsLit &&
+                            map[b + 6].IsLit &&
+                            map[b - 1].IsLit &&
+                            map[b + 1].IsLit)
+                        .Count());
+            case 36:
+                return bulbinfo.Sum(map =>
+                    Enumerable.Range(0, 36)
+                        .Where(b =>
+                            b % 6 != 5 && b / 6 != 5 &&
+                            map[b].IsTransparent == map[b + 1].IsTransparent &&
+                            map[b].IsTransparent == map[b + 6].IsTransparent &&
+                            map[b].IsTransparent == map[b + 7].IsTransparent)
+                        .Count());
+        }
+        throw new InvalidOperationException();
     }
 }
