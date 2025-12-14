@@ -13,8 +13,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: Bulbmaps
   title: Bulbmaps
-  author: Author
-  description: Module description
+  author: Quinn Wuest
+  description: "It has been determined that it takes over 18 quintillion bomb defusal
+    experts to screw in a light bulb.\r\n\r\nModder Secret Santa #2 entry\r\nPrompt
+    by _Play_\r\nDeveloped by Quinn Wuest (in place of Celtic)\r\n\r\n[url=https://ktane.timwi.de/HTML/Bulbmaps.html]Manual
+    HTML[/url]\r\n[url=https://ktane.timwi.de/PDF/Bulbmaps.pdf]Manual PDF[/url]\r\n\r\nReceived
+    prompt:\r\nA Modded Swirl between two Centurion modules, with one of the modules
+    being very colourful/colour-related, and the other - not at all."
   version: 1.0
   outputFolder: build
-  previewImage: {fileID: 2800000, guid: bd5c1f4881f57d54481b44e4c8a7779a, type: 3}
+  previewImage: {fileID: 2800000, guid: ffaac58d9b4209e4f841cf2f02fc8c56, type: 3}

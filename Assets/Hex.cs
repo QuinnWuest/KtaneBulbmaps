@@ -18,20 +18,20 @@ namespace Bulbmaps
         }
         public static readonly double WidthToHeight = Math.Sqrt(3) / 2;
 
-        public int Q { get; private set; }
-        public int R { get; private set; }
+        public int Q { get; private set; } // +Q goes southeast
+        public int R { get; private set; } // +R goes south
 
         public Hex[] Neighbors
         {
             get
             {
                 return Ut.NewArray(
-                    new Hex(Q - 1, R),
-                    new Hex(Q, R - 1),
-                    new Hex(Q + 1, R - 1),
-                    new Hex(Q + 1, R),
-                    new Hex(Q, R + 1),
-                    new Hex(Q - 1, R + 1));
+                    new Hex(Q - 1, R),      // northwest
+                    new Hex(Q, R - 1),      // north
+                    new Hex(Q + 1, R - 1),  // norheast
+                    new Hex(Q + 1, R),      // southeast
+                    new Hex(Q, R + 1),      // south
+                    new Hex(Q - 1, R + 1)); // southwest
             }
         }
 
