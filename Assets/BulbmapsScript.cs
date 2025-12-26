@@ -44,7 +44,7 @@ public class BulbmapsScript : MonoBehaviour
         new Color32(255, 80, 80, 255),      // red
         new Color32(255, 255, 80, 255),     // yellow
         new Color32(80, 255, 80, 255),      // green
-        new Color32(60, 80, 255, 255),    // blue
+        new Color32(60, 80, 255, 255),      // blue
         new Color32(180, 80, 255, 255),     // purple
         new Color32(200, 200, 200, 255)     // white
     };
@@ -426,7 +426,7 @@ public class BulbmapsScript : MonoBehaviour
                 }
                 .Count(q => q.Count(b => b.IsTransparent) >= 5);
             case 19:
-                return bulbinfo.Count(b => b.IsLit && b.Color == BulbColor.Red);
+                return bulbinfo.Count(b => !b.IsLit && b.Color == BulbColor.Red);
             case 20:
                 return bulbinfo.Count(b => !b.IsTransparent && b.Color == BulbColor.Purple);
             case 21:
